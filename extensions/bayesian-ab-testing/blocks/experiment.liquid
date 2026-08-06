@@ -1,0 +1,26 @@
+{% if product %}
+  <div
+    id="bayesian-ab-test"
+    data-api-base-url="{{ block.settings.api_base_url | escape }}"
+    data-product-id="gid://shopify/Product/{{ product.id }}"
+    data-shop-domain="{{ shop.permanent_domain | escape }}"
+    hidden
+  ></div>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Bayesian A/B testing",
+  "target": "body",
+  "javascript": "experiment.js",
+  "settings": [
+    {
+      "type": "text",
+      "id": "api_base_url",
+      "label": "Local app URL",
+      "info": "Use the URL printed by shopify app dev, for example http://localhost:3000.",
+      "default": "http://localhost:3000"
+    }
+  ]
+}
+{% endschema %}

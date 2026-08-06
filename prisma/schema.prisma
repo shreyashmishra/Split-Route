@@ -1,0 +1,79 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
+// enough when changing adapters.
+// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+datasource db {
+  provider = "sqlite"
+  url      = "file:dev.sqlite"
+}
+
+model Session {
+  id                  String    @id
+  shop                String
+  state               String
+  isOnline            Boolean   @default(false)
+  scope               String?
+  expires             DateTime?
+  accessToken         String
+  userId              BigInt?
+  firstName           String?
+  lastName            String?
+  email               String?
+  accountOwner        Boolean   @default(false)
+  locale              String?
+  collaborator        Boolean?  @default(false)
+  emailVerified       Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+}
+
+model Experiment {
+  id         String   @id @default(cuid())
+  shopDomain String
+  name       String
+  productId  String
+  // SQLite does not enforce enum values, so the API validates draft/running/completed.
+  status     String   @default("draft")
+  createdAt  DateTime @default(now())
+
+  variants Variant[]
+  events   Event[]
+
+  @@index([shopDomain])
+  @@index([productId, status])
+}
+
+model Variant {
+  id           String     @id @default(cuid())
+  experimentId String
+  name         String
+  // SQLite stores Prisma Json values as text while preserving their JSON shape.
+  config       Json
+  experiment   Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  events       Event[]
+
+  @@unique([experimentId, name])
+  @@index([experimentId])
+}
+
+model Event {
+  id           String     @id @default(cuid())
+  experimentId String
+  variantId    String
+  sessionId    String
+  // The API validates impression/conversion values before writing them.
+  type         String
+  createdAt    DateTime   @default(now())
+  experiment   Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  variant      Variant    @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([experimentId, createdAt])
+  @@index([variantId, type])
+  @@index([sessionId, experimentId, variantId])
+}

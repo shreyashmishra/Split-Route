@@ -1,0 +1,117 @@
+.content {
+  display: grid;
+  gap: 1rem;
+}
+
+.form {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 42rem;
+}
+
+.formRow {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.statusForm {
+  align-items: end;
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  max-width: 24rem;
+}
+
+.input {
+  border: 1px solid #8c9196;
+  border-radius: 0.35rem;
+  box-sizing: border-box;
+  font: inherit;
+  padding: 0.6rem 0.75rem;
+  width: 100%;
+}
+
+.table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.table th,
+.table td {
+  border-bottom: 1px solid #e1e3e5;
+  padding: 0.75rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  color: #616a75;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.muted {
+  color: #616a75;
+}
+
+.error {
+  color: #b42318;
+}
+
+.metricGrid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.metric {
+  background: #f6f6f7;
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.metricLabel {
+  color: #616a75;
+  font-size: 0.8rem;
+  margin: 0 0 0.35rem;
+  text-transform: uppercase;
+}
+
+.metricValue {
+  font-size: 1.45rem;
+  font-weight: 650;
+  margin: 0;
+}
+
+.chart {
+  background: #fbfbfb;
+  border: 1px solid #e1e3e5;
+  border-radius: 0.5rem;
+  min-height: 16rem;
+  padding: 0.75rem;
+}
+
+.chart svg {
+  display: block;
+  height: 15rem;
+  overflow: visible;
+  width: 100%;
+}
+
+.chartLabel {
+  fill: #616a75;
+  font-size: 11px;
+}
+
+@media (max-width: 48rem) {
+  .formRow,
+  .metricGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .table {
+    font-size: 0.9rem;
+  }
+}
