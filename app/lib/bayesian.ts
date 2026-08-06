@@ -13,6 +13,13 @@ export interface BayesianWinProbabilityOptions {
   random?: () => number;
 }
 
+export interface PosteriorSummary {
+  alpha: number;
+  beta: number;
+  mean: number;
+  credibleInterval95: [number, number];
+}
+
 export const DEFAULT_MONTE_CARLO_SAMPLES = 10_000;
 
 /** Convert observed binary outcomes into the requested Beta(1 + conversions, 1 + failures) prior/posterior. */
@@ -62,10 +69,46 @@ export function probabilityBBeatsA(
   return bWins / samples;
 }
 
+/**
+ * Summarize one variant's posterior, including a Monte Carlo 95% credible
+ * interval. The interval describes uncertainty in the conversion rate; it is
+ * not a frequentist confidence interval.
+ */
+export function posteriorSummary(
+  counts: ConversionCounts,
+  options: BayesianWinProbabilityOptions = {},
+): PosteriorSummary {
+  const samples = options.samples ?? DEFAULT_MONTE_CARLO_SAMPLES;
+  if (!Number.isInteger(samples) || samples <= 0) {
+    throw new Error("samples must be a positive integer");
+  }
+
+  const parameters = betaParameters(counts);
+  const random = options.random ?? Math.random;
+  const draws = Array.from({ length: samples }, () =>
+    sampleBeta(parameters.alpha, parameters.beta, random),
+  ).sort((left, right) => left - right);
+
+  return {
+    alpha: parameters.alpha,
+    beta: parameters.beta,
+    mean: parameters.alpha / (parameters.alpha + parameters.beta),
+    credibleInterval95: [quantile(draws, 0.025), quantile(draws, 0.975)],
+  };
+}
+
 function sampleBeta(alpha: number, beta: number, random: () => number): number {
   const x = sampleGamma(alpha, random);
   const y = sampleGamma(beta, random);
   return x / (x + y);
+}
+
+function quantile(sortedValues: number[], probability: number): number {
+  const position = (sortedValues.length - 1) * probability;
+  const lower = Math.floor(position);
+  const upper = Math.ceil(position);
+  if (lower === upper) return sortedValues[lower];
+  return sortedValues[lower] + (sortedValues[upper] - sortedValues[lower]) * (position - lower);
 }
 
 // Marsaglia-Tsang gamma sampler. Our Beta shapes are always >= 1 because of

@@ -63,15 +63,17 @@ model Variant {
 }
 
 model Event {
-  id           String     @id @default(cuid())
-  experimentId String
-  variantId    String
-  sessionId    String
+  id             String     @id @default(cuid())
+  experimentId   String
+  variantId      String
+  sessionId      String
+  // Optional client key makes retries safe without changing the event payload contract.
+  idempotencyKey String?    @unique
   // The API validates impression/conversion values before writing them.
-  type         String
-  createdAt    DateTime   @default(now())
-  experiment   Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
-  variant      Variant    @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  type           String
+  createdAt      DateTime   @default(now())
+  experiment     Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  variant        Variant    @relation(fields: [variantId], references: [id], onDelete: Cascade)
 
   @@index([experimentId, createdAt])
   @@index([variantId, type])

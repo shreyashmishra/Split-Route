@@ -1,6 +1,10 @@
 import type { LoaderFunctionArgs } from "react-router";
 import db from "../db.server";
-import { probabilityBBeatsA, type ConversionCounts } from "../lib/bayesian";
+import {
+  posteriorSummary,
+  probabilityBBeatsA,
+  type ConversionCounts,
+} from "../lib/bayesian";
 import { apiError, apiJson } from "../lib/api.server";
 import { authenticate } from "../shopify.server";
 
@@ -25,6 +29,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
         db.event.count({ where: { experimentId, variantId: variant.id, type: "conversion" } }),
       ]);
       const counts: ConversionCounts = { impressions, conversions };
+      const posterior = posteriorSummary(counts);
       return {
         id: variant.id,
         name: variant.name,
@@ -32,8 +37,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
         impressions,
         conversions,
         conversionRate: impressions === 0 ? 0 : conversions / impressions,
-        alpha: 1 + conversions,
-        beta: 1 + impressions - conversions,
+        alpha: posterior.alpha,
+        beta: posterior.beta,
+        posteriorMean: posterior.mean,
+        credibleInterval95: posterior.credibleInterval95,
         counts,
       };
     }),

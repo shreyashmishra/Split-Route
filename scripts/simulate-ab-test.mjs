@@ -69,6 +69,7 @@ async function simulateVisitor(index) {
     experimentId: config.experimentId,
     variantId,
     sessionId,
+    idempotencyKey: `simulation:${config.seed}:${index}:impression`,
     type: "impression",
   });
 
@@ -78,6 +79,7 @@ async function simulateVisitor(index) {
       experimentId: config.experimentId,
       variantId,
       sessionId,
+      idempotencyKey: `simulation:${config.seed}:${index}:conversion`,
       type: "conversion",
     });
   }

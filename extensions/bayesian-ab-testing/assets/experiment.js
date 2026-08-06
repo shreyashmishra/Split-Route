@@ -41,14 +41,17 @@
 
   function sendEvent(type) {
     if (!assignment) return Promise.resolve();
+    var visitorSessionId = sessionId();
     return fetch(apiBaseUrl + "/api/events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         experimentId: assignment.experimentId,
         variantId: assignment.variant.id,
-        sessionId: sessionId(),
-        type: type
+        sessionId: visitorSessionId,
+        type: type,
+        idempotencyKey: "theme:" + assignment.experimentId + ":" +
+          assignment.variant.id + ":" + visitorSessionId + ":" + type
       }),
       keepalive: true
     }).then(function (response) {

@@ -3,6 +3,7 @@ import { Form, redirect, useLoaderData } from "react-router";
 import db from "../db.server";
 import {
   DEFAULT_MONTE_CARLO_SAMPLES,
+  posteriorSummary,
   probabilityBBeatsA,
   type ConversionCounts,
 } from "../lib/bayesian";
@@ -136,6 +137,7 @@ function summarizeVariant(
   variant: { id: string; name: string; config: unknown },
   counts: ConversionCounts,
 ) {
+  const posterior = posteriorSummary(counts);
   return {
     id: variant.id,
     name: variant.name,
@@ -144,6 +146,8 @@ function summarizeVariant(
     conversions: counts.conversions,
     conversionRate:
       counts.impressions === 0 ? 0 : counts.conversions / counts.impressions,
+    posteriorMean: posterior.mean,
+    credibleInterval95: posterior.credibleInterval95,
   };
 }
 
@@ -184,6 +188,8 @@ export default function ExperimentDetailPage() {
               <th>Impressions</th>
               <th>Conversions</th>
               <th>Conversion rate</th>
+              <th>Posterior mean</th>
+              <th>95% credible interval</th>
               <th>Config</th>
             </tr>
           </thead>
@@ -194,6 +200,11 @@ export default function ExperimentDetailPage() {
                 <td>{variant.impressions.toLocaleString()}</td>
                 <td>{variant.conversions.toLocaleString()}</td>
                 <td>{(variant.conversionRate * 100).toFixed(2)}%</td>
+                <td>{(variant.posteriorMean * 100).toFixed(2)}%</td>
+                <td>
+                  {(variant.credibleInterval95[0] * 100).toFixed(2)}% –{" "}
+                  {(variant.credibleInterval95[1] * 100).toFixed(2)}%
+                </td>
                 <td>{JSON.stringify(variant.config)}</td>
               </tr>
             ))}

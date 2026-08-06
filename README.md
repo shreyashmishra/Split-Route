@@ -108,6 +108,11 @@ produce a high Bayesian win probability for B. The script uses Node's built-in
 `fetch`, posts impressions before conversions, and does not require a service
 outside this local app.
 
+Event requests may include an `idempotencyKey`; the database enforces it with a
+unique constraint so browser retries and concurrent simulator requests do not
+inflate experiment counts. Results also expose each variant's posterior mean
+and 95% Beta credible interval alongside `P(B beats A)`.
+
 ### Application Storage
 
 This template uses [Prisma](https://www.prisma.io/) to store session data, by default using an [SQLite](https://www.sqlite.org/index.html) database.

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { betaParameters, probabilityBBeatsA } from "./bayesian";
+import { betaParameters, posteriorSummary, probabilityBBeatsA } from "./bayesian";
 
 test("uses the Beta(1, 1) prior when there is no data", () => {
   const probability = probabilityBBeatsA(
@@ -40,4 +40,15 @@ test("does not become overconfident with a small sample", () => {
   );
 
   assert.ok(probability > 0.15 && probability < 0.85);
+});
+
+test("reports posterior uncertainty with a 95 percent credible interval", () => {
+  const posterior = posteriorSummary({ impressions: 1_000, conversions: 100 });
+
+  assert.equal(posterior.alpha, 101);
+  assert.equal(posterior.beta, 901);
+  assert.equal(posterior.mean, 101 / 1002);
+  assert.ok(posterior.credibleInterval95[0] < posterior.mean);
+  assert.ok(posterior.credibleInterval95[1] > posterior.mean);
+  assert.ok(posterior.credibleInterval95[1] - posterior.credibleInterval95[0] < 0.06);
 });
