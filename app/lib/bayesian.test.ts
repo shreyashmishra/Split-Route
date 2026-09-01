@@ -52,3 +52,22 @@ test("reports posterior uncertainty with a 95 percent credible interval", () => 
   assert.ok(posterior.credibleInterval95[1] > posterior.mean);
   assert.ok(posterior.credibleInterval95[1] - posterior.credibleInterval95[0] < 0.06);
 });
+
+test("rejects invalid counts and sample sizes", () => {
+  for (const counts of [
+    { impressions: -1, conversions: 0 },
+    { impressions: 1.5, conversions: 0 },
+    { impressions: 1, conversions: -1 },
+    { impressions: 1, conversions: 2 },
+  ]) {
+    assert.throws(() => betaParameters(counts));
+  }
+  for (const samples of [0, -1, 1.5, NaN, Infinity]) {
+    assert.throws(() => posteriorSummary({ impressions: 0, conversions: 0 }, { samples }));
+    assert.throws(() => probabilityBBeatsA(
+      { impressions: 0, conversions: 0 },
+      { impressions: 0, conversions: 0 },
+      { samples },
+    ));
+  }
+});
