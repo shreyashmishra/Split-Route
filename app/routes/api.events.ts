@@ -96,7 +96,7 @@ export async function action({ request }: ActionFunctionArgs) {
   // prevents impossible conversion rates from entering the Beta posterior.
   if (type === "conversion") {
     const impression = await db.event.findFirst({
-      where: { experimentId, variantId, sessionId, type: "impression" },
+      where: { experimentId, variantId, sessionId: normalizedSessionId, type: "impression" },
       select: { id: true },
     });
     if (!impression) {
@@ -149,7 +149,17 @@ export async function action({ request }: ActionFunctionArgs) {
           createdAt: true,
         },
       });
-      if (existingEvent) return apiJson({ event: existingEvent, duplicate: true }, undefined, true);
+      if (existingEvent) {
+        if (
+          existingEvent.experimentId !== experimentId ||
+          existingEvent.variantId !== variantId ||
+          existingEvent.sessionId !== normalizedSessionId ||
+          existingEvent.type !== type
+        ) {
+          return apiError("Idempotency key was already used for a different event", 409, true);
+        }
+        return apiJson({ event: existingEvent, duplicate: true }, undefined, true);
+      }
     }
     throw error;
   }
