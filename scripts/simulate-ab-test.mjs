@@ -27,6 +27,12 @@ const config = {
   seed: integerOption(options.seed, DEFAULTS.seed, "seed"),
 };
 
+if (config.variantA === config.variantB) throw new Error("A and B must use different variant IDs");
+const endpoint = new URL(config.apiUrl);
+if (!["http:", "https:"].includes(endpoint.protocol)) {
+  throw new Error("--api-url must use HTTP or HTTPS");
+}
+
 const random = mulberry32(config.seed);
 const summary = {
   A: { visitors: 0, conversions: 0 },
@@ -98,11 +104,22 @@ async function postEvent(event) {
 }
 
 function parseArgs(args) {
-  return Object.fromEntries(args.map((arg) => {
-    if (arg === "--help" || arg === "-h") return ["help", true];
-    const [key, ...valueParts] = arg.replace(/^--/, "").split("=");
-    return [camelCase(key), valueParts.join("=") || true];
-  }));
+  const allowed = new Set([
+    "api-url", "experiment-id", "variant-a", "variant-b", "visitors",
+    "rate-a", "rate-b", "concurrency", "seed",
+  ]);
+  const parsed = {};
+  for (const arg of args) {
+    if (arg === "--help" || arg === "-h") { parsed.help = true; continue; }
+    const match = /^--([^=]+)=(.+)$/.exec(arg);
+    if (!match || !allowed.has(match[1]) || !match[2].trim()) {
+      throw new Error(`Invalid option: ${arg}. Use --help for supported --name=value options.`);
+    }
+    const key = camelCase(match[1]);
+    if (key in parsed) throw new Error(`Duplicate option: --${match[1]}`);
+    parsed[key] = match[2].trim();
+  }
+  return parsed;
 }
 
 function camelCase(value) {
@@ -111,7 +128,7 @@ function camelCase(value) {
 
 function integerOption(value, fallback, name) {
   const result = value === undefined ? fallback : Number(value);
-  if (!Number.isInteger(result) || result <= 0) throw new Error(`--${name} must be a positive integer`);
+  if (!Number.isSafeInteger(result) || result <= 0) throw new Error(`--${name} must be a positive integer`);
   return result;
 }
 
