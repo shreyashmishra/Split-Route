@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { createHash, randomUUID } from "node:crypto";
+
 const DEFAULTS = {
   apiUrl: "http://localhost:3000/api/events",
   visitors: 1_000,
@@ -25,6 +27,7 @@ const config = {
   rateB: rateOption(options.rateB, DEFAULTS.rateB, "rate-b"),
   concurrency: integerOption(options.concurrency, DEFAULTS.concurrency, "concurrency"),
   seed: integerOption(options.seed, DEFAULTS.seed, "seed"),
+  runId: options.runId ?? randomUUID(),
 };
 
 if (config.variantA === config.variantB) throw new Error("A and B must use different variant IDs");
@@ -33,6 +36,10 @@ if (!["http:", "https:"].includes(endpoint.protocol)) {
   throw new Error("--api-url must use HTTP or HTTPS");
 }
 
+const namespace = createHash("sha256").update(JSON.stringify([
+  config.experimentId, config.variantA, config.variantB, config.runId,
+  config.seed, config.rateA, config.rateB,
+])).digest("hex");
 const random = mulberry32(config.seed);
 const summary = {
   A: { visitors: 0, conversions: 0 },
@@ -42,6 +49,7 @@ const summary = {
 console.log(`Simulating ${config.visitors.toLocaleString()} visitors`);
 console.log(`A true conversion rate: ${(config.rateA * 100).toFixed(2)}%`);
 console.log(`B true conversion rate: ${(config.rateB * 100).toFixed(2)}%`);
+console.log(`Run ID: ${config.runId}`);
 console.log(`Posting events to ${config.apiUrl}`);
 
 for (let start = 0; start < config.visitors; start += config.concurrency) {
@@ -57,7 +65,7 @@ for (const variant of ["A", "B"]) {
   const result = summary[variant];
   console.log(
     `${variant}: ${result.visitors} visitors, ${result.conversions} conversions, ` +
-      `${((result.conversions / result.visitors) * 100).toFixed(2)}% observed rate`,
+      `${result.visitors ? ((result.conversions / result.visitors) * 100).toFixed(2) + "%" : "N/A"} observed rate`,
   );
 }
 console.log("\nOpen the experiment detail page to inspect the Bayesian win probability.");
@@ -67,7 +75,7 @@ async function simulateVisitor(index) {
   const variantName = random() < 0.5 ? "A" : "B";
   const variantId = variantName === "A" ? config.variantA : config.variantB;
   const trueRate = variantName === "A" ? config.rateA : config.rateB;
-  const sessionId = `simulation-${config.seed}-${index}-${Math.floor(random() * 1e9)}`;
+  const sessionId = `simulation-${namespace}-${index}`;
   const converted = random() < trueRate;
 
   summary[variantName].visitors += 1;
@@ -75,7 +83,7 @@ async function simulateVisitor(index) {
     experimentId: config.experimentId,
     variantId,
     sessionId,
-    idempotencyKey: `simulation:${config.seed}:${index}:impression`,
+    idempotencyKey: `simulation:${namespace}:${index}:impression`,
     type: "impression",
   });
 
@@ -85,7 +93,7 @@ async function simulateVisitor(index) {
       experimentId: config.experimentId,
       variantId,
       sessionId,
-      idempotencyKey: `simulation:${config.seed}:${index}:conversion`,
+      idempotencyKey: `simulation:${namespace}:${index}:conversion`,
       type: "conversion",
     });
   }
@@ -106,7 +114,7 @@ async function postEvent(event) {
 function parseArgs(args) {
   const allowed = new Set([
     "api-url", "experiment-id", "variant-a", "variant-b", "visitors",
-    "rate-a", "rate-b", "concurrency", "seed",
+    "rate-a", "rate-b", "concurrency", "seed", "run-id",
   ]);
   const parsed = {};
   for (const arg of args) {
@@ -158,5 +166,6 @@ Options:
   --rate-a=<0..1>       True conversion rate for A (default: ${DEFAULTS.rateA})
   --rate-b=<0..1>       True conversion rate for B (default: ${DEFAULTS.rateB})
   --concurrency=<n>     In-flight visitors (default: ${DEFAULTS.concurrency})
+  --run-id=<id>         Reuse to replay a run idempotently (default: new UUID)
   --seed=<n>            Reproducible random seed (default: ${DEFAULTS.seed})`);
 }
