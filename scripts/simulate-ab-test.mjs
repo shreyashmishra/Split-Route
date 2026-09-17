@@ -9,6 +9,7 @@ const DEFAULTS = {
   rateB: 0.14,
   concurrency: 100,
   seed: 42,
+  timeoutMs: 10_000,
 };
 
 const options = parseArgs(process.argv.slice(2));
@@ -28,8 +29,10 @@ const config = {
   concurrency: integerOption(options.concurrency, DEFAULTS.concurrency, "concurrency"),
   seed: integerOption(options.seed, DEFAULTS.seed, "seed"),
   runId: options.runId ?? randomUUID(),
+  timeoutMs: integerOption(options.timeoutMs, DEFAULTS.timeoutMs, "timeout-ms"),
 };
 
+if (config.timeoutMs > 2_147_483_647) throw new Error("--timeout-ms must be at most 2147483647");
 if (config.variantA === config.variantB) throw new Error("A and B must use different variant IDs");
 const endpoint = new URL(config.apiUrl);
 if (!["http:", "https:"].includes(endpoint.protocol)) {
@@ -104,9 +107,10 @@ async function postEvent(event) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(event),
+    signal: AbortSignal.timeout(config.timeoutMs),
   });
+  const message = await response.text();
   if (!response.ok) {
-    const message = await response.text();
     throw new Error(`Event failed (${response.status}): ${message}`);
   }
 }
@@ -114,7 +118,7 @@ async function postEvent(event) {
 function parseArgs(args) {
   const allowed = new Set([
     "api-url", "experiment-id", "variant-a", "variant-b", "visitors",
-    "rate-a", "rate-b", "concurrency", "seed", "run-id",
+    "rate-a", "rate-b", "concurrency", "seed", "run-id", "timeout-ms",
   ]);
   const parsed = {};
   for (const arg of args) {
@@ -166,6 +170,7 @@ Options:
   --rate-a=<0..1>       True conversion rate for A (default: ${DEFAULTS.rateA})
   --rate-b=<0..1>       True conversion rate for B (default: ${DEFAULTS.rateB})
   --concurrency=<n>     In-flight visitors (default: ${DEFAULTS.concurrency})
+  --timeout-ms=<n>      Per-request timeout (default: ${DEFAULTS.timeoutMs} ms)
   --run-id=<id>         Reuse to replay a run idempotently (default: new UUID)
   --seed=<n>            Reproducible random seed (default: ${DEFAULTS.seed})`);
 }

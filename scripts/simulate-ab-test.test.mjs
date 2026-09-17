@@ -70,3 +70,18 @@ test("simulation runs are isolated, reproducible, and post impressions first", a
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+test("simulator terminates when the event server stalls", async () => {
+  const { createServer } = await import("node:http");
+  const server = createServer(() => {});
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const result = await runSimulator(`http://127.0.0.1:${server.address().port}`, ["--timeout-ms=100"]);
+    assert.notEqual(result.code, 0);
+    assert.match(result.stderr, /TimeoutError/);
+    assert.doesNotMatch(result.stdout, /Observed results/);
+  } finally {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
