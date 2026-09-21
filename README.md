@@ -1,4 +1,25 @@
-# Shopify App Template - React Router
+# Split Route
+
+Split Route compares two product variants using Bayesian conversion-rate estimates.
+It includes experiment management, event ingestion with retry protection, posterior
+credible intervals, and a local traffic simulator.
+
+## Development checks
+
+After installing dependencies with `npm ci`, run:
+
+```shell
+npm test
+npm run typecheck
+npm run lint
+npm run build
+```
+
+Tests cover the statistics engine, event retry conflicts, and simulator behavior.
+They use a database stub and a temporary local HTTP server, without writing to the
+development database or requiring a Shopify store.
+
+## Template reference
 
 This is a template for building a [Shopify app](https://shopify.dev/docs/apps/getting-started) using [React Router](https://reactrouter.com/). It was forked from the [Shopify Remix app template](https://github.com/Shopify/shopify-app-template-remix) and converted to React Router.
 
@@ -107,6 +128,19 @@ Repeat with `--rate-b=0.10` to check that random noise does not consistently
 produce a high Bayesian win probability for B. The script uses Node's built-in
 `fetch`, posts impressions before conversions, and does not require a service
 outside this local app.
+
+Each simulator invocation creates a new run ID and prints it. The same seed
+reproduces variant assignments and conversion outcomes, but a fresh run adds new
+events. To resume or replay a run without adding duplicate events, pass its printed
+ID as `--run-id=<id>` and keep the experiment, variants, seed, and conversion rates
+unchanged. Concurrency can change without changing generated outcomes.
+
+Event identities include the experiment, variants, run ID, seed, and rates, so
+separate experiments and changed-rate simulations cannot accidentally reuse keys.
+The simulator stops on failed requests; earlier successful events remain recorded.
+Requests time out after 10 seconds by default; set `--timeout-ms=30000` for a slower
+local server. All options use `--name=value`, and invalid or unknown options fail
+before traffic is sent.
 
 Event requests may include an `idempotencyKey`; the database enforces it with a
 unique constraint so browser retries and concurrent simulator requests do not
